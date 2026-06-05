@@ -1,0 +1,316 @@
+---
+title: "CLUSTERING ALGERIAN FOREST FIREST FISKS"
+author: "nais fanisa"
+date: "2026-05-31"
+output: rmdformats::readthedown
+---
+
+```{css, echo=FALSE}
+p {
+  text-align: justify;
+}
+```
+
+## Deskripsi Dataset
+
+Dataset yang digunakan dalam penelitian ini adalah **Algerian Forest Fires Dataset** yang diperoleh dari **UCI Machine Learning Repository**. Dataset ini berisi data kejadian kebakaran hutan yang dikumpulkan dari dua wilayah di Algeria, yaitu **Bejaia** dan **Sidi Bel-Abbes**, selama periode Juni 2012 hingga September 2012.
+
+Pada penelitian ini hanya digunakan data dari wilayah **Bejaia** sebanyak **122 observasi**. Data yang digunakan terdiri dari **10 variabel numerik** yang merepresentasikan kondisi cuaca dan indeks kebakaran hutan. Variabel tersebut meliputi *Temperature*, *RH (Relative Humidity)*, *Ws (Wind Speed)*, *Rain*, *FFMC (Fine Fuel Moisture Code)*, *DMC (Duff Moisture Code)*, *DC (Drought Code)*, *ISI (Initial Spread Index)*, *BUI (Buildup Index)*, dan *FWI (Fire Weather Index)*.
+
+Variabel **day**, **month**, dan **year** tidak digunakan dalam proses clustering karena hanya berfungsi sebagai informasi waktu pengamatan. Selain itu, variabel **Classes** juga tidak digunakan karena merupakan label kelas (*fire* dan *not fire*), sedangkan penelitian ini menggunakan pendekatan *unsupervised learning* melalui metode clustering.
+
+Dataset ini dapat diakses melalui UCI Machine Learning Repository pada tautan berikut:
+
+<https://archive.ics.uci.edu/dataset/547/algerian+forest+fires+dataset>
+
+## Import Data
+
+```{r}
+# Library
+library(cluster)
+library(factoextra)
+library(fpc)
+library(clusterSim)
+library(readxl)
+
+# Import data
+data <- read_excel("C:/Users/X13/Downloads/ALGERIAN FOREST FIREST FISKS.xlsx")
+head(data)
+str(data)
+summary(data)
+
+# Pilih variabel numerik
+data_num <- data[, c("Temperature",
+                     "RH",
+                     "Ws",
+                     "Rain",
+                     "FFMC",
+                     "DMC",
+                     "DC",
+                     "ISI",
+                     "BUI",
+                     "FWI")]
+
+# Standardisasi data
+data_scaled <- scale(data_num)
+
+```
+
+## Menentukan Jumlah cluster
+
+```{r}
+# Menentukan jumlah cluster
+# Elbow Method
+fviz_nbclust(
+  data_scaled,
+  kmeans,
+  method = "wss"
+) +
+  ggtitle("Elbow Method")
+
+# Silhouette Method
+fviz_nbclust(
+  data_scaled,
+  kmeans,
+  method = "silhouette"
+) +
+  ggtitle("Silhouette Method")
+
+# Jumlah cluster optimal
+k <- 2
+```
+
+### Pembahasan
+
+Penentuan jumlah cluster dilakukan menggunakan **Elbow Method** dan **Silhouette Method**. Elbow Method digunakan untuk melihat jumlah cluster yang paling sesuai berdasarkan nilai *Within Cluster Sum of Squares* (WSS). Dari grafik Elbow Method terlihat bahwa penurunan nilai WSS mulai melambat setelah k = 2, sehingga jumlah cluster yang layak digunakan berada di sekitar nilai tersebut.
+
+Selanjutnya dilakukan pengujian menggunakan Silhouette Method. Berdasarkan grafik Silhouette Method, nilai silhouette tertinggi diperoleh pada **k = 2** dengan nilai sekitar **0,34**. Hal ini menunjukkan bahwa pembentukan dua cluster menghasilkan kualitas pengelompokan yang paling baik dibandingkan jumlah cluster lainnya.
+
+Berdasarkan hasil Elbow Method dan Silhouette Method, jumlah cluster yang dipilih adalah **2 cluster**.
+
+## Metode K-Means Clustering 
+
+```{r}
+# METODE K-MEANS CLUSTERING
+
+set.seed(123)
+
+kmeans_result <- kmeans(
+  data_scaled,
+  centers = k,
+  nstart = 25
+)
+kmeans_result
+
+# Tabel Cluster K-Means
+table(kmeans_result$cluster)
+
+# Plot K-Means
+fviz_cluster(
+  kmeans_result,
+  data = data_scaled,
+  geom = "point",
+  ellipse.type = "convex",
+  main = "Cluster K-Means"
+)
+```
+
+### Pembahasan
+
+Hasil clustering menggunakan metode **K-Means** menghasilkan **2 cluster**. Berdasarkan visualisasi cluster, terlihat bahwa kedua cluster memiliki pemisahan yang cukup jelas. Jumlah anggota pada **Cluster 1** sebanyak **76 data**, sedangkan **Cluster 2** sebanyak **46 data**. Hal ini menunjukkan bahwa metode K-Means mampu mengelompokkan data ke dalam dua kelompok berdasarkan kemiripan karakteristik masing-masing data.
+
+## Hierarchical Clustering 
+
+```{r}
+# HIERARCHICAL CLUSTERING
+
+dist_matrix <- dist(data_scaled)
+
+hc <- hclust(
+  dist_matrix,
+  method = "ward.D2"
+)
+
+
+# Dendrogram
+plot(
+  hc,
+  main = "Dendrogram Hierarchical Clustering",
+  xlab = "",
+  sub = ""
+)
+
+rect.hclust(
+  hc,
+  k = k,
+  border = "red"
+)
+
+# Membentuk cluster
+hc_cluster <- cutree(
+  hc,
+  k = k
+)
+
+hc_cluster
+
+# Tabel Cluster Hierarchical
+table(hc_cluster)
+
+# Plot Hierarchical
+fviz_cluster(
+  list(
+    data = data_scaled,
+    cluster = hc_cluster
+  ),
+  geom = "point",
+  ellipse.type = "convex",
+  main = "Cluster Hierarchical"
+)
+
+```
+
+### Pembahasan
+
+Metode **Hierarchical Clustering** dilakukan menggunakan metode *Ward.D2* dengan jumlah cluster sebanyak **2 cluster**. Berdasarkan dendrogram yang dihasilkan, terlihat bahwa data dapat dibagi menjadi dua kelompok utama yang ditunjukkan oleh kotak berwarna merah. Pemotongan dendrogram pada k = 2 menghasilkan dua cluster yang memiliki karakteristik yang berbeda.
+
+Berdasarkan hasil clustering, diperoleh **50 data** pada Cluster 1 dan **72 data** pada Cluster 2. Hasil ini menunjukkan bahwa sebagian besar data tergabung ke dalam Cluster 2.
+
+Visualisasi cluster menunjukkan bahwa kedua cluster memiliki pemisahan yang cukup jelas meskipun masih terdapat beberapa data yang berada pada area yang berdekatan. Secara umum, metode Hierarchical Clustering mampu mengelompokkan data ke dalam dua kelompok berdasarkan tingkat kemiripan karakteristik masing-masing data.
+
+## Evaluasi Silhouette 
+
+Evaluasi kualitas cluster dilakukan menggunakan **Silhouette Coefficient**. Nilai silhouette digunakan untuk mengukur seberapa baik suatu data berada pada cluster-nya dibandingkan dengan cluster lainnya. Semakin tinggi nilai silhouette, maka semakin baik kualitas cluster yang terbentuk.
+
+
+```{r}
+# EVALUASI SILHOUETTE
+
+sil_kmeans <- silhouette(
+  kmeans_result$cluster,
+  dist_matrix
+)
+
+sil_hc <- silhouette(
+  hc_cluster,
+  dist_matrix
+)
+```
+
+```{r}
+# Plot Silhouette K-Means
+fviz_silhouette(sil_kmeans)
+```
+
+### Pembahasan
+
+Berdasarkan hasil perhitungan, diperoleh nilai rata-rata silhouette sebesar **0,34**. Nilai tersebut menunjukkan bahwa cluster yang terbentuk memiliki kualitas yang cukup baik dengan pemisahan antar cluster yang cukup jelas.
+
+Selain itu, Cluster 1 memiliki nilai rata-rata silhouette sebesar **0,35**, sedangkan Cluster 2 memiliki nilai rata-rata silhouette sebesar **0,33**. Nilai silhouette yang positif pada kedua cluster menunjukkan bahwa sebagian besar data telah berada pada cluster yang sesuai.
+
+```{r}
+# Plot Silhouette Hierarchical
+fviz_silhouette(sil_hc)
+```
+
+### Pembahasan 
+
+Berdasarkan hasil perhitungan, diperoleh nilai rata-rata silhouette sebesar **0,30**. Cluster 1 memiliki nilai rata-rata silhouette sebesar **0,36**, sedangkan Cluster 2 memiliki nilai rata-rata silhouette sebesar **0,26**. Meskipun kedua cluster masih menunjukkan nilai positif, kualitas cluster yang dihasilkan relatif lebih rendah dibandingkan metode K-Means.
+
+### Kesimpulan
+
+Secara keseluruhan, nilai silhouette metode K-Means lebih tinggi dibandingkan metode Hierarchical Clustering. Hal ini menunjukkan bahwa hasil pengelompokan menggunakan metode **K-Means** memiliki kualitas cluster yang lebih baik dan pemisahan antar cluster yang lebih jelas dibandingkan metode Hierarchical Clustering.
+
+```{r}
+# Nilai rata-rata silhouette
+silhouette_kmeans <- mean(sil_kmeans[,3])
+
+silhouette_hc <- mean(sil_hc[,3])
+
+```
+
+## Bootstrap Stability 
+
+```{r}
+# BOOTSTRAP STABILITY
+
+boot_kmeans <- clusterboot(
+  data_scaled,
+  B = 100,
+  clustermethod = kmeansCBI,
+  krange = k,
+  seed = 123
+)
+
+boot_hc <- clusterboot(
+  data_scaled,
+  B = 100,
+  clustermethod = hclustCBI,
+  method = "ward.D2",
+  k = k,
+  seed = 123
+)
+
+bootstrap_kmeans <- mean(boot_kmeans$bootmean)
+bootstrap_kmeans
+bootstrap_hc <- mean(boot_hc$bootmean)
+bootstrap_hc
+```
+
+### Pembahasan
+
+### Bootstrap Stability K-Means
+
+Evaluasi kestabilan cluster pada metode **K-Means** dilakukan menggunakan Bootstrap Stability dengan 100 kali pengulangan (*B = 100*). Hasil yang diperoleh menunjukkan nilai bootstrap stability sebesar **0,855**. Nilai tersebut menunjukkan bahwa cluster yang terbentuk memiliki tingkat kestabilan yang baik karena sebagian besar anggota cluster tetap konsisten pada setiap proses bootstrap.
+
+### Bootstrap Stability Hierarchical Clustering
+
+Evaluasi kestabilan cluster pada metode **Hierarchical Clustering** dilakukan menggunakan Bootstrap Stability dengan 100 kali pengulangan (*B = 100*). Hasil yang diperoleh menunjukkan nilai bootstrap stability sebesar **0,623**. Nilai tersebut menunjukkan bahwa cluster yang terbentuk cukup stabil, namun masih lebih rendah dibandingkan metode K-Means.
+
+### Perbandingan Bootstrap Stability
+
+Berdasarkan hasil Bootstrap Stability, metode **K-Means** memiliki nilai kestabilan sebesar **0,855**, sedangkan metode **Hierarchical Clustering** memiliki nilai sebesar **0,623**. Hal ini menunjukkan bahwa hasil cluster yang dihasilkan oleh metode K-Means lebih stabil dan lebih konsisten dibandingkan metode Hierarchical Clustering ketika dilakukan pengujian menggunakan bootstrap.
+
+```{r}
+# TABEL HASIL
+
+hasil_validasi <- data.frame(
+  Metode = c(
+    "K-Means",
+    "Hierarchical"
+  ),
+  Silhouette = c(
+    silhouette_kmeans,
+    silhouette_hc
+  ),
+  Bootstrap_Stability = c(
+    bootstrap_kmeans,
+    bootstrap_hc
+  )
+)
+
+print(hasil_validasi)
+
+# Menentukan metode terbaik
+if(silhouette_kmeans > silhouette_hc){
+  cat("\nMetode terbaik adalah K-Means\n")
+} else {
+  cat("\nMetode terbaik adalah Hierarchical Clustering\n")
+}
+```
+
+### Pembahasan
+
+Perbandingan metode clustering dilakukan menggunakan **Silhouette Coefficient** dan **Bootstrap Stability**. Hasil validasi menunjukkan bahwa metode **K-Means** memperoleh nilai silhouette sebesar **0,3402** dan nilai bootstrap stability sebesar **0,8550**. Sementara itu, metode **Hierarchical Clustering** memperoleh nilai silhouette sebesar **0,3029** dan nilai bootstrap stability sebesar **0,6233**.
+
+Berdasarkan nilai silhouette, metode K-Means memiliki kualitas cluster yang lebih baik dibandingkan Hierarchical Clustering karena menghasilkan nilai silhouette yang lebih tinggi. Selain itu, berdasarkan nilai bootstrap stability, metode K-Means juga menunjukkan tingkat kestabilan cluster yang lebih baik dibandingkan Hierarchical Clustering.
+
+Dengan demikian, baik dari segi kualitas maupun kestabilan cluster, metode K-Means memberikan hasil yang lebih baik dibandingkan metode Hierarchical Clustering.
+
+## Kesimpulan
+
+Berdasarkan hasil analisis clustering pada data **Algerian Forest Fires Dataset** wilayah **Bejaia**, diperoleh jumlah cluster optimal sebanyak **2 cluster** berdasarkan Elbow Method dan Silhouette Method. Selanjutnya dilakukan clustering menggunakan metode K-Means dan Hierarchical Clustering.
+
+Hasil evaluasi menunjukkan bahwa metode **K-Means** menghasilkan nilai silhouette sebesar **0,3402** dan bootstrap stability sebesar **0,8550**, sedangkan metode **Hierarchical Clustering** menghasilkan nilai silhouette sebesar **0,3029** dan bootstrap stability sebesar **0,6233**.
+
+Berdasarkan hasil tersebut, metode **K-Means** dipilih sebagai metode clustering terbaik karena memiliki kualitas cluster dan tingkat kestabilan yang lebih baik dibandingkan metode Hierarchical Clustering.
